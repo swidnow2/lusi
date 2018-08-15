@@ -15,7 +15,7 @@ How to build
 How to run
 ==========
 
-    $ ./lusi.sh <path to your index directory>
+    $ ./lusi.sh <path to your index directory> &>outputfile.txt
 
 Output
 ======
