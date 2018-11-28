@@ -8,7 +8,7 @@ if [ $# -lt 1 ]; then
 	printf "\nNo arguments were passed to the script.\n"
 	printf "Usage: lusi.sh index_directory\n\n"
 	exit 1
-elif [ $# -gt 1 ]; then
+elif [ $# -gt 2 ]; then
 	printf "\nThe script requires only one argument. More than one arguments were passed.\n"
 	printf "Usage: lusi.sh index_directory\n\n"
 	exit 1
@@ -25,13 +25,13 @@ if [[ "$1" == */ ]]; then
 	ls -1 $1>.dir_list.out
 	for a in `cat .dir_list.out`
 	do
-		java -jar bin/lusi-1.1-SNAPSHOT.jar $1$a
+		java -jar bin/lusi-1.2-SNAPSHOT.jar $1$a $2
 	done
 else
 	ls -1 $1>.dir_list.out
 	for a in `cat .dir_list.out`
 	do
-		java -jar bin/lusi-1.1-SNAPSHOT.jar $1/$a
+		java -jar bin/lusi-1.2-SNAPSHOT.jar $1/$a $2
 	done
 fi
 
