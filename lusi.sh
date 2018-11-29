@@ -25,13 +25,13 @@ if [[ "$1" == */ ]]; then
 	ls -1 $1>.dir_list.out
 	for a in `cat .dir_list.out`
 	do
-		java -jar bin/lusi-1.2-SNAPSHOT.jar $1$a $2
+		java -jar bin/lusi-1.3-SNAPSHOT.jar $1$a $2
 	done
 else
 	ls -1 $1>.dir_list.out
 	for a in `cat .dir_list.out`
 	do
-		java -jar bin/lusi-1.2-SNAPSHOT.jar $1/$a $2
+		java -jar bin/lusi-1.3-SNAPSHOT.jar $1/$a $2
 	done
 fi
 

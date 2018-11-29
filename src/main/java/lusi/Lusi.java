@@ -1,5 +1,7 @@
 package lusi;
 
+import org.apache.lucene.document.Document;
+import org.apache.lucene.document.Fieldable;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.SegmentInfos;
 import org.apache.lucene.index.Term;
@@ -9,9 +11,8 @@ import org.apache.lucene.store.FSDirectory;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 class Lusi {
     private static final long MEG = 1024 * 1024;
@@ -47,9 +48,28 @@ class Lusi {
         System.out.println("Unique term count: " + fields.size());
         System.out.println("List of terms with number of unique values: \n");
 
-        fields.forEach((key, value) -> {
-            System.out.println(key + ": " + value);
-        });
+        fields.forEach((key, value) -> System.out.println(key + "\t" + value));
+    }
+
+    public void countFieldSize() throws IOException {
+        final IndexReader reader = IndexReader.open(directory);
+
+        Map<String, Integer> fields = new HashMap<>();
+
+        for (int i = 0; i < reader.maxDoc(); i++) {
+            final Document document = reader.document(i);
+            final List<Fieldable> documentFields = document.getFields();
+
+            documentFields.forEach(f -> {
+                fields.putIfAbsent(f.name(), 0);
+                fields.computeIfPresent(f.name(), (k, v) -> v += f.stringValue().getBytes().length);
+            });
+        }
+
+        System.out.println("Unique stored fields count: " + fields.size());
+        System.out.println("List of stored fields with estimated sizes (in bytes): \n");
+
+        fields.forEach((key, value) -> System.out.println(key + "\t" + value));
     }
 
     void printSegmentInfo() {
