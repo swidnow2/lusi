@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.LongAdder;
 
 class Lusi {
     private static final long MEG = 1024 * 1024;
@@ -38,10 +39,10 @@ class Lusi {
         final IndexReader reader = IndexReader.open(directory);
         final TermEnum terms = reader.terms();
 
-        Map<String, Integer> fields = new HashMap<>();
+        Map<String, Long> fields = new HashMap<>();
         while (terms.next()) {
             final Term term = terms.term();
-            fields.putIfAbsent(term.field(), 1);
+            fields.putIfAbsent(term.field(), 0L);
             fields.computeIfPresent(term.field(), (key, value) -> value + 1);
         }
 
@@ -53,20 +54,27 @@ class Lusi {
 
     public void countFieldSize() throws IOException {
         final IndexReader reader = IndexReader.open(directory);
+        final LongAdder sizeSummary = new LongAdder();
 
-        Map<String, Integer> fields = new HashMap<>();
+        Map<String, Long> fields = new HashMap<>();
 
         for (int i = 0; i < reader.maxDoc(); i++) {
             final Document document = reader.document(i);
             final List<Fieldable> documentFields = document.getFields();
 
             documentFields.forEach(f -> {
-                fields.putIfAbsent(f.name(), 0);
-                fields.computeIfPresent(f.name(), (k, v) -> v += f.stringValue().getBytes().length);
+                fields.putIfAbsent(f.name(), 0L);
+                fields.computeIfPresent(f.name(), (k, v) -> {
+                    final int length = f.stringValue().getBytes().length;
+                    sizeSummary.add(length);
+                    return v + f.stringValue().getBytes().length;
+
+                });
             });
         }
 
         System.out.println("Unique stored fields count: " + fields.size());
+        System.out.println("Total size of fields: " + sizeSummary);
         System.out.println("List of stored fields with estimated sizes (in bytes): \n");
 
         fields.forEach((key, value) -> System.out.println(key + "\t" + value));
