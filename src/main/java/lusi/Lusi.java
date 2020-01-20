@@ -1,23 +1,24 @@
 package lusi;
 
-import org.apache.lucene.document.Document;
-import org.apache.lucene.document.Fieldable;
+import org.apache.lucene.document.DateTools;
+import org.apache.lucene.index.Fields;
 import org.apache.lucene.index.IndexReader;
+import org.apache.lucene.index.MultiFields;
 import org.apache.lucene.index.SegmentInfos;
-import org.apache.lucene.index.Term;
-import org.apache.lucene.index.TermEnum;
+import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.Query;
+import org.apache.lucene.search.TermRangeQuery;
+import org.apache.lucene.search.TotalHitCountCollector;
 import org.apache.lucene.store.FSDirectory;
+import org.apache.lucene.util.BytesRef;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.atomic.LongAdder;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Date;
 
 class Lusi {
-    private static final long MEG = 1024 * 1024;
-    private static final String SEGMENT_INFO_FORMAT = "segment=%s\tsizeWithDocStores=%dM\tsizeWithoutDocStores=%dM\tdocCount=%d\tdelCount=%d";
     private final String indexPath;
     private SegmentInfos si;
     private FSDirectory directory;
@@ -36,80 +37,34 @@ class Lusi {
     }
 
     public void dumpTerms() throws IOException {
+
+
         final IndexReader reader = IndexReader.open(directory);
-        final TermEnum terms = reader.terms();
 
-        Map<String, Long> fields = new HashMap<>();
-        while (terms.next()) {
-            final Term term = terms.term();
-            fields.putIfAbsent(term.field(), 0L);
-            fields.computeIfPresent(term.field(), (key, value) -> value + 1);
+        printFields(reader);
+        printModifiedTerms(reader);
+    }
+
+    private void printFields(IndexReader reader) throws IOException {
+        System.out.println("---FIELDS---");
+        Fields fields = MultiFields.getFields(reader);
+        for (String field : fields) {
+            System.out.println(field);
         }
-
-        System.out.println("Unique term count: " + fields.size());
-        System.out.println("List of terms with number of unique values: \n");
-
-        fields.forEach((key, value) -> System.out.println(key + "\t" + value));
+        System.out.println("---FIELDS---");
     }
 
-    public void countFieldSize() throws IOException {
-        final IndexReader reader = IndexReader.open(directory);
-        final LongAdder sizeSummary = new LongAdder();
+    private void printModifiedTerms(IndexReader reader) throws IOException {
+        Date yerBeforeDate = Date.from(LocalDateTime.now().minusYears(1).atZone(ZoneId.systemDefault()).toInstant());
+        String yearBeforeStr = DateTools.dateToString(yerBeforeDate, DateTools.Resolution.MILLISECOND);
 
-        Map<String, Long> fields = new HashMap<>();
+        String now = DateTools.dateToString(new Date(), DateTools.Resolution.MILLISECOND);
 
-        for (int i = 0; i < reader.maxDoc(); i++) {
-            final Document document = reader.document(i);
-            final List<Fieldable> documentFields = document.getFields();
 
-            documentFields.forEach(f -> {
-                fields.putIfAbsent(f.name(), 0L);
-                fields.computeIfPresent(f.name(), (k, v) -> {
-                    final int length = f.stringValue().getBytes().length;
-                    sizeSummary.add(length);
-                    return v + f.stringValue().getBytes().length;
+        Query query = new TermRangeQuery("modified", new BytesRef(yearBeforeStr), new BytesRef(now), true, true);
+        TotalHitCountCollector collector = new TotalHitCountCollector();
+        new IndexSearcher(reader).search(query, collector);
 
-                });
-            });
-        }
-
-        System.out.println("Unique stored fields count: " + fields.size());
-        System.out.println("Total size of fields: " + sizeSummary);
-        System.out.println("List of stored fields with estimated sizes (in bytes): \n");
-
-        fields.forEach((key, value) -> System.out.println(key + "\t" + value));
-    }
-
-    void printSegmentInfo() {
-        System.out.println("\nSegment sizing:\n");
-        si.iterator().forEachRemaining(segment -> {
-            try {
-                String info = String.format(
-                        SEGMENT_INFO_FORMAT,
-                        segment.name,
-                        segment.sizeInBytes(true) / MEG,
-                        segment.sizeInBytes(false) / MEG,
-                        segment.docCount,
-                        segment.getDelCount()
-                );
-                System.out.println(info);
-            } catch (IOException ignored) {
-            }
-        });
-    }
-
-    void printDiagnostics() {
-        System.out.println("\nDiagnostics:\n");
-        si.iterator().forEachRemaining(segment -> System.out.println("segment=" + segment.name + "\t" + segment.getDiagnostics()));
-    }
-
-    void printFiles() {
-        System.out.println("\nFiles:\n");
-        si.iterator().forEachRemaining(segment -> {
-            try {
-                System.out.println("segment=" + segment.name + "\t" + segment.files());
-            } catch (IOException e) {
-            }
-        });
+        System.out.println("Hits=" + collector.getTotalHits());
     }
 }

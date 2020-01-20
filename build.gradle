@@ -12,7 +12,8 @@ repositories {
 }
 
 dependencies {
-    compile group: 'org.apache.lucene', name: 'lucene-core', version: '3.3.0'
+    compile group: 'org.apache.lucene', name: 'lucene-core', version: '4.4.0'
+    compile group: 'org.apache.lucene', name: 'lucene-queryparser', version: '4.4.0'
 }
 
 task fatJar(type: Jar) {
