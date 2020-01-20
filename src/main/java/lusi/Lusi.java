@@ -42,7 +42,12 @@ class Lusi {
         final IndexReader reader = IndexReader.open(directory);
 
         printFields(reader);
-        printModifiedTerms(reader);
+        printDocumentsNumber(reader);
+        printTermsNumberModifiedWithinYear(reader);
+    }
+
+    private void printDocumentsNumber(IndexReader reader) {
+        System.out.printf("maxDoc: %d\n", reader.maxDoc());
     }
 
     private void printFields(IndexReader reader) throws IOException {
@@ -54,7 +59,8 @@ class Lusi {
         System.out.println("---FIELDS---");
     }
 
-    private void printModifiedTerms(IndexReader reader) throws IOException {
+
+    private void printTermsNumberModifiedWithinYear(IndexReader reader) throws IOException {
         Date yerBeforeDate = Date.from(LocalDateTime.now().minusYears(1).atZone(ZoneId.systemDefault()).toInstant());
         String yearBeforeStr = DateTools.dateToString(yerBeforeDate, DateTools.Resolution.MILLISECOND);
 
@@ -65,6 +71,6 @@ class Lusi {
         TotalHitCountCollector collector = new TotalHitCountCollector();
         new IndexSearcher(reader).search(query, collector);
 
-        System.out.println("Hits=" + collector.getTotalHits());
+        System.out.println("Last year updated hits: " + collector.getTotalHits());
     }
 }
